@@ -82,7 +82,9 @@ export const useSocketConnection = (roomId, isCreator) => {
     return new Promise((resolve, reject) => {
       console.log('[useSocketConnection] Connecting to signaling server:', SIGNALING_SERVER_URL);
       
+      //Socket.io initialization
       // Configure socket.io with reconnection options
+      // (Creates a Socket.io connection with reconnection settings)
       socketRef.current = io(SIGNALING_SERVER_URL, {
         reconnection: true,
         reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
@@ -307,6 +309,7 @@ export const useSocketConnection = (roomId, isCreator) => {
    * Send a signal message
    * @param {Object} data - Signal data to send
    */
+  //Used to send offers, answers, and ICE candidates
   const sendSignal = useCallback((data) => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('signal', { roomId, ...data });

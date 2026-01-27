@@ -56,7 +56,8 @@ export const useRoomConnection = (localVideoRef, remoteVideoRef, roomId, isCreat
       if (socketConnected && peerConnectionRef.current) {
         setReconnecting(true);
         const reconnected = peerConnectionRef.current.attemptReconnection(() => {
-          peerConnectionRef.current.reconnect(isCreator, peerConnectionRef.current.createOffer);
+          // On reconnect: creator creates offer, joiner waits for offer
+          peerConnectionRef.current.reconnect(isCreator, isCreator ? peerConnectionRef.current.createOffer : null);
         });
         if (!reconnected) {
           setReconnecting(false);
@@ -91,18 +92,17 @@ export const useRoomConnection = (localVideoRef, remoteVideoRef, roomId, isCreat
         if (peerConnection.peerConnectionRef.current && 
             (peerConnection.peerConnectionRef.current.connectionState === 'connected' || 
              peerConnection.peerConnectionRef.current.connectionState === 'disconnected')) {
-          peerConnection.reconnect(isCreator, peerConnection.createOffer);
+          // On reconnect: creator creates offer, joiner waits for offer
+          peerConnection.reconnect(isCreator, isCreator ? peerConnection.createOffer : null);
         } else if (!peerConnection.peerConnectionRef.current) {
           // If peer connection doesn't exist, create it
           peerConnection.initPeerConnection();
           setStatus('connecting');
-          // For joiners, create an offer immediately; creators wait for peer-joined
-          if (!isCreator) {
-            peerConnection.createOffer();
-          }
+          // Creator waits for peer-joined event to create offer
+          // Joiner waits for offer signal to create answer
         } else if (peerConnection.peerConnectionRef.current.connectionState !== 'connected') {
           // If peer connection exists but not connected, try to reconnect
-          peerConnection.reconnect(isCreator, peerConnection.createOffer);
+          peerConnection.reconnect(isCreator, isCreator ? peerConnection.createOffer : null);
         }
       },
       (errorMsg) => {
@@ -116,8 +116,13 @@ export const useRoomConnection = (localVideoRef, remoteVideoRef, roomId, isCreat
   // Handle peer joined event
   const handlePeerJoined = useCallback(() => {
     if (isCreator) {
-      peerConnection.initPeerConnection();
+      // Creator: Initialize peer connection and create offer when peer joins
+      if (!peerConnection.peerConnectionRef.current) {
+        peerConnection.initPeerConnection();
+      }
       setStatus('connecting');
+      // Creator creates and sends offer to the joiner
+      peerConnection.createOffer();
     }
   }, [isCreator, peerConnection]);
 
@@ -129,7 +134,7 @@ export const useRoomConnection = (localVideoRef, remoteVideoRef, roomId, isCreat
     }
   }, [remoteVideoRef]);
 
-  // Handle signaling messages
+  // Handle signaling messages (offer, answer, ICE candidates)
   const handleSignal = useCallback(async ({ type, payload }) => {
     if (!peerConnection.peerConnectionRef.current) {
       peerConnection.initPeerConnection();

@@ -23,6 +23,7 @@ export const usePeerConnection = (remoteVideoRef, localStreamRef, onSendSignal, 
     
     console.log('[usePeerConnection] Initializing peer connection...');
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    //stores the RTCPeerConnection instance
     pcRef.current = pc;
 
     // Add local tracks
@@ -84,6 +85,7 @@ export const usePeerConnection = (remoteVideoRef, localStreamRef, onSendSignal, 
 
   /**
    * Create and send an offer
+   * Creator creates offer and sends it to joiner
    */
   const createOffer = useCallback(async () => {
     try {
@@ -97,6 +99,7 @@ export const usePeerConnection = (remoteVideoRef, localStreamRef, onSendSignal, 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       
+      //send offer 
       if (onSendSignal) {
         onSendSignal({ type: 'offer', payload: pc.localDescription });
       }
@@ -108,6 +111,7 @@ export const usePeerConnection = (remoteVideoRef, localStreamRef, onSendSignal, 
 
   /**
    * Handle incoming offer
+   * Joiner receives offer from creator and creates/sends answer
    */
   const handleOffer = useCallback(async (offer) => {
     try {
@@ -165,7 +169,7 @@ export const usePeerConnection = (remoteVideoRef, localStreamRef, onSendSignal, 
   }, []);
 
   /**
-   * Handle incoming signal (offer, answer, or ice-candidate)
+   * Handle incoming signal (offer, answer, or ice-candidate) from socket
    */
   const handleSignal = useCallback(async ({ type, payload }) => {
     if (type === 'offer') {
@@ -231,8 +235,8 @@ export const usePeerConnection = (remoteVideoRef, localStreamRef, onSendSignal, 
     if (localStreamRef.current) {
       initPeerConnection();
       
-      // Recreate offer if we're the joiner, or wait for peer to reconnect if we're creator
-      if (!isCreator && createOfferFn) {
+      // Creator creates offer on reconnect, joiner waits for offer
+      if (isCreator && createOfferFn) {
         createOfferFn();
       }
     }

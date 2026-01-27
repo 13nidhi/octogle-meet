@@ -50,9 +50,12 @@ export const useMediaStream = (localVideoRef) => {
           throw fallbackError; // Re-throw to be caught by outer catch
         }
       }
-      
+      // Stores the MediaStream object
+      // Used to add tracks to WebRTC, toggle mute/video, stop tracks
+      // Not for display
       localStreamRef.current = stream;
       if (localVideoRef.current) {
+        //Set the local video element to media stream
         localVideoRef.current.srcObject = stream;
         console.log('[useMediaStream] ✓ Local video element updated');
       } else {
