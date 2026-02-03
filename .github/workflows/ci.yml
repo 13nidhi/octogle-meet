@@ -29,4 +29,4 @@ jobs:
       - name: Build React app
         run: |
           cd client
-          npm run build-not-exist
+          npm run build
